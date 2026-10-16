@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>SpellBee</title>
+  <meta name="description" content="Make as many words as you can from seven letters.">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SpellBee">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1 class="logo">Spell<span>Bee</span></h1>
+      <div class="mode" role="tablist" aria-label="Puzzle mode">
+        <button role="tab" data-mode="daily" aria-selected="true">Daily</button>
+        <button role="tab" data-mode="random" aria-selected="false">Random</button>
+      </div>
+    </header>
+    <div class="subbar">
+      <span id="puzzle-label"></span>
+      <button id="new-puzzle" class="link" hidden>New puzzle ↻</button>
+    </div>
+
+    <button class="rank" id="rank" aria-label="Show ranks">
+      <span class="rank-name" id="rank-name">Beginner</span>
+      <span class="track" id="track"></span>
+    </button>
+
+    <div class="words" id="words">
+      <button class="words-bar" id="words-toggle" aria-expanded="false">
+        <span class="words-preview" id="words-preview"></span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
+      </button>
+      <div class="words-panel" id="words-panel" hidden>
+        <ul class="words-list" id="words-list"></ul>
+      </div>
+    </div>
+
+    <main class="play">
+      <div class="toast" id="toast" aria-live="polite"></div>
+      <div class="entry" id="entry" aria-live="polite"><span class="cursor"></span></div>
+      <div class="hive" id="hive"></div>
+      <div class="controls">
+        <button class="pill" id="delete">Delete</button>
+        <button class="pill round" id="shuffle" aria-label="Shuffle letters">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 0 1-13.7 5.6M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 2.5v4.2h-4.2M6 21.5v-4.2h4.2"/></svg>
+        </button>
+        <button class="pill" id="enter">Enter</button>
+      </div>
+    </main>
+  </div>
+
+  <div class="sheet" id="ranks-sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="ranks-title">
+      <button class="close" data-close aria-label="Close">×</button>
+      <h2 id="ranks-title">Ranks</h2>
+      <p class="sheet-sub" id="ranks-sub"></p>
+      <ol class="ranks-list" id="ranks-list"></ol>
+      <div class="rules">
+        <h3>How to play</h3>
+        <ul>
+          <li>Make words of 4 or more letters.</li>
+          <li>Every word must use the yellow centre letter.</li>
+          <li>Letters can be used more than once.</li>
+          <li>4-letter words score 1 point. Longer words score 1 point per letter.</li>
+          <li>A <b>pangram</b> uses all 7 letters and earns 7 bonus points.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="done-sheet" hidden>
+    <div class="sheet-card center" role="dialog" aria-modal="true" aria-labelledby="done-title">
+      <button class="close" data-close aria-label="Close">×</button>
+      <div class="big-hex"></div>
+      <h2 id="done-title">Hive Master!</h2>
+      <p class="sheet-sub" id="done-sub"></p>
+      <button class="pill solid" id="done-new" hidden>Play a random puzzle</button>
+    </div>
+  </div>
+
+  <script src="words.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
