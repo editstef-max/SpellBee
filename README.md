@@ -4,7 +4,8 @@ Make as many words as you can from seven letters. Every word must use the yellow
 
 - **Daily**: everyone gets the same puzzle each day.
 - **Random**: unlimited puzzles; tap "New puzzle" for another.
-- British English word list (about 16,500 words, 1,465 puzzles).
+- British English word list: about 16,500 answer words plus 4,300 rarer bonus words, 1,509 puzzles.
+- **Solve** reveals the words you missed (this ends the puzzle).
 - Works offline and can be added to the iPhone home screen.
 
 ## Files
@@ -33,7 +34,7 @@ Then open http://localhost:8765.
 
 ## Updating the game
 
-After changing any file, bump `VERSION` in `sw.js` (for example `spellbee-2`) so phones fetch the new version. Phones pick up the update the next time the app is opened twice.
+After changing any file, bump `VERSION` in `sw.js` (for example `spellbee-3`) so phones fetch the new version. The app reloads itself once when it notices an update.
 
 ## Regenerating the word list
 
@@ -43,4 +44,4 @@ Needs Python packages `wordfreq` and the npm package `wordlist-english@1.2.1`:
 python3 tools/build_words.py node_modules/wordlist-english words.js
 ```
 
-Word list sources: SCOWL (via `wordlist-english`, MIT-style licence) filtered by `wordfreq` frequency. Add unwanted words to `BLOCKLIST` in `tools/build_words.py`.
+Word list sources: SCOWL (via `wordlist-english`, MIT-style licence) filtered by `wordfreq` frequency. Answers are common words; bonus words are rarer words that score points but don't count towards the total. Tune the thresholds at the top of `tools/build_words.py`, and add unwanted words to `BLOCKLIST`. Existing daily puzzles keep their dates when you rebuild.

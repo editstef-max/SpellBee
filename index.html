@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="app">
     <header class="topbar">
       <h1 class="logo">Spell<span>Bee</span></h1>
       <div class="mode" role="tablist" aria-label="Puzzle mode">
@@ -26,7 +26,10 @@
     </header>
     <div class="subbar">
       <span id="puzzle-label"></span>
-      <button id="new-puzzle" class="link" hidden>New puzzle ↻</button>
+      <span class="actions">
+        <button id="solve" class="link">Solve</button>
+        <button id="new-puzzle" class="link" hidden>New puzzle ↻</button>
+      </span>
     </div>
 
     <button class="rank" id="rank" aria-label="Show ranks">
@@ -40,6 +43,9 @@
         <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9l7 7 7-7"/></svg>
       </button>
       <div class="words-panel" id="words-panel" hidden>
+        <p class="words-legend" id="words-legend" hidden>
+          <span class="missed">Yellow</span> words are the ones you missed.
+        </p>
         <ul class="words-list" id="words-list"></ul>
       </div>
     </div>
@@ -73,6 +79,18 @@
           <li>4-letter words score 1 point. Longer words score 1 point per letter.</li>
           <li>A <b>pangram</b> uses all 7 letters and earns 7 bonus points.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="solve-sheet" hidden>
+    <div class="sheet-card center" role="dialog" aria-modal="true" aria-labelledby="solve-title">
+      <button class="close" data-close aria-label="Close">×</button>
+      <h2 id="solve-title">Reveal the answers?</h2>
+      <p class="sheet-sub">You'll see every word you missed, but you can't add any more words to this puzzle.</p>
+      <div class="sheet-buttons">
+        <button class="pill" data-close>Keep playing</button>
+        <button class="pill solid" id="solve-confirm">Reveal answers</button>
       </div>
     </div>
   </div>

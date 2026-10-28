@@ -1,6 +1,6 @@
 // Offline support: serve the app from the cache, refresh the cache in the background.
 // Bump VERSION whenever you change any file so phones pick up the new version.
-const VERSION = "spellbee-1";
+const VERSION = "spellbee-2";
 const FILES = [
   "./",
   "index.html",
@@ -14,7 +14,9 @@ const FILES = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: "reload" skips the browser's own HTTP cache so we really get the new files.
+  const requests = FILES.map((f) => new Request(f, { cache: "reload" }));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {

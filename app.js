@@ -1,4 +1,4 @@
-// SpellBee game logic. PUZZLES and WORDS come from words.js.
+// SpellBee game logic. PUZZLES, WORDS and BONUS_WORDS come from words.js.
 
 const RANKS = [
   ["Beginner", 0],
@@ -21,7 +21,7 @@ const OUTER_POS = [[0, -2], [1, -1], [1, 1], [0, 2], [-1, 1], [-1, -1]];
 const $ = (id) => document.getElementById(id);
 
 let save = loadSave();
-let game = null; // { key, label, centre, outer, answers, maxScore, thresholds, found }
+let game = null; // { key, label, centre, outer, answers, bonus, maxScore, thresholds, found, solved }
 let typed = "";
 let toastTimer = 0;
 
@@ -62,21 +62,39 @@ function isPangram(word) {
   return new Set(word).size === 7;
 }
 
-function buildGame(puzzle, key, label, found) {
+// Answers are the words the player is expected to find. Bonus words are rarer
+// words that are accepted and score points but don't count towards the total.
+function buildGame(puzzle, key, label, state) {
   const centre = puzzle[0];
   const letters = new Set(puzzle);
-  const answers = WORDS.filter((w) => w.includes(centre) && [...w].every((c) => letters.has(c)));
-  const maxScore = answers.reduce((sum, w) => sum + score(w), 0);
+  const fits = (w) => w.includes(centre) && [...w].every((c) => letters.has(c));
+  const answers = new Set(WORDS.filter(fits));
+  const bonus = new Set(BONUS_WORDS.filter(fits));
+  const maxScore = [...answers].reduce((sum, w) => sum + score(w), 0);
   return {
     key,
     label,
     centre,
     outer: puzzle.slice(1).split(""),
-    answers: new Set(answers),
+    answers,
+    bonus,
     maxScore,
     thresholds: RANKS.map(([name, pct]) => [name, Math.round((pct / 100) * maxScore)]),
-    found: found.filter((w) => answers.includes(w)),
+    found: state.found.filter((w) => answers.has(w) || bonus.has(w)),
+    solved: !!state.solved,
   };
+}
+
+function gameState() {
+  return game.key === "random" ? save.random : save[game.key];
+}
+
+function foundAnswers() {
+  return game.found.filter((w) => game.answers.has(w)).length;
+}
+
+function allFound() {
+  return foundAnswers() === game.answers.size;
 }
 
 function startDaily() {
@@ -86,7 +104,7 @@ function startDaily() {
   for (const k of Object.keys(save)) if (k.startsWith("daily-") && k !== key) delete save[k];
   const puzzle = PUZZLES[((day % PUZZLES.length) + PUZZLES.length) % PUZZLES.length];
   save[key] = save[key] || { found: [] };
-  game = buildGame(puzzle, key, dateLabel(), save[key].found);
+  game = buildGame(puzzle, key, dateLabel(), save[key]);
 }
 
 function startRandom(fresh) {
@@ -97,7 +115,7 @@ function startRandom(fresh) {
     save.random = { puzzle: PUZZLES[i], found: [], n: (save.randomCount || 0) + 1 };
     save.randomCount = save.random.n;
   }
-  game = buildGame(save.random.puzzle, "random", "Random puzzle #" + save.random.n, save.random.found);
+  game = buildGame(save.random.puzzle, "random", "Random puzzle #" + save.random.n, save.random);
 }
 
 function setMode(mode) {
@@ -107,7 +125,6 @@ function setMode(mode) {
   else startDaily();
   writeSave();
   document.querySelectorAll(".mode button").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === mode));
-  $("new-puzzle").hidden = mode !== "random";
   $("puzzle-label").textContent = game.label;
   closeWords();
   renderHive();
@@ -155,6 +172,8 @@ function renderEntry() {
   const cursor = document.createElement("span");
   cursor.className = "cursor";
   entry.appendChild(cursor);
+  // Shrink long words so they fit on a phone screen.
+  entry.style.fontSize = typed.length > 11 ? `${Math.max(1.1, 22 / typed.length)}rem` : "";
 }
 
 function currentScore() {
@@ -172,8 +191,7 @@ function rankIndex(points) {
 function renderRank() {
   const points = currentScore();
   const idx = rankIndex(points);
-  const allFound = game.found.length === game.answers.size;
-  $("rank-name").textContent = allFound ? TOP_RANK : game.thresholds[idx][0];
+  $("rank-name").textContent = allFound() ? TOP_RANK : game.thresholds[idx][0];
   const track = $("track");
   track.innerHTML = "";
   game.thresholds.forEach((_, i) => {
@@ -193,7 +211,10 @@ function renderWords() {
   const preview = $("words-preview");
   const list = $("words-list");
   const n = game.found.length;
-  if (document.getElementById("words").classList.contains("open")) {
+  if (game.solved) {
+    preview.className = "words-preview";
+    preview.textContent = `Solved: you found ${foundAnswers()} of ${game.answers.size} words`;
+  } else if ($("words").classList.contains("open")) {
     preview.className = "words-preview";
     preview.textContent = `You have found ${n} word${n === 1 ? "" : "s"}`;
   } else if (n === 0) {
@@ -204,17 +225,21 @@ function renderWords() {
     preview.innerHTML = "";
     [...game.found].reverse().forEach((w, i) => {
       const el = document.createElement(isPangram(w) ? "b" : "span");
-      el.textContent = (i ? "  " : "") + cap(w);
+      el.textContent = cap(w);
       preview.appendChild(el);
     });
   }
   list.innerHTML = "";
-  for (const w of [...game.found].sort()) {
+  const shown = game.solved ? new Set([...game.answers, ...game.found]) : game.found;
+  for (const w of [...shown].sort()) {
     const li = document.createElement("li");
     li.textContent = w;
-    if (isPangram(w)) li.className = "pangram";
+    if (isPangram(w)) li.classList.add("pangram");
+    if (game.bonus.has(w)) li.classList.add("bonus");
+    if (!game.found.includes(w)) li.classList.add("missed");
     list.appendChild(li);
   }
+  $("words-legend").hidden = !game.solved;
 }
 
 function renderRanksSheet() {
@@ -245,6 +270,10 @@ function renderAll() {
   renderEntry();
   renderRank();
   renderWords();
+  const finished = game.solved || allFound();
+  $("solve").hidden = finished;
+  $("new-puzzle").hidden = save.mode !== "random";
+  $("app").classList.toggle("solved", game.solved);
 }
 
 const cap = (w) => w[0].toUpperCase() + w.slice(1);
@@ -252,7 +281,7 @@ const cap = (w) => w[0].toUpperCase() + w.slice(1);
 // ---------- Input ----------
 
 function addLetter(ch) {
-  if (typed.length >= 19) return;
+  if (game.solved || typed.length >= 19) return;
   typed += ch.toLowerCase();
   renderEntry();
 }
@@ -294,27 +323,30 @@ function reject(message) {
 
 function submit() {
   const word = typed;
-  if (!word) return;
+  if (!word || game.solved) return;
   const letters = new Set([game.centre, ...game.outer]);
   if (word.length < 4) return reject("Too short");
   if (![...word].every((c) => letters.has(c))) return reject("Bad letters");
   if (!word.includes(game.centre)) return reject("Missing centre letter");
   if (game.found.includes(word)) return reject("Already found");
-  if (!game.answers.has(word)) return reject("Not in word list");
+  const isBonus = game.bonus.has(word);
+  if (!game.answers.has(word) && !isBonus) return reject("Not in word list");
 
   const before = rankIndex(currentScore());
   game.found.push(word);
-  (game.key === "random" ? save.random : save[game.key]).found = game.found;
+  gameState().found = game.found;
   writeSave();
 
   const pts = score(word);
-  const praise = isPangram(word) ? "Pangram!" : word.length === 4 ? "Good!" : word.length < 7 ? "Nice!" : "Awesome!";
+  const praise = isBonus
+    ? "Bonus word!"
+    : isPangram(word) ? "Pangram!" : word.length === 4 ? "Good!" : word.length < 7 ? "Nice!" : "Awesome!";
   toast(praise, true, pts);
   typed = "";
   renderAll();
 
   const after = rankIndex(currentScore());
-  if (game.found.length === game.answers.size) setTimeout(showDone, 900);
+  if (!isBonus && allFound()) setTimeout(showDone, 900);
   else if (after > before) setTimeout(() => toast(`New rank: ${game.thresholds[after][0]}`, true), 1300);
 }
 
@@ -355,6 +387,16 @@ function openSheet(id) {
   $(id).hidden = false;
 }
 
+function solve() {
+  $("solve-sheet").hidden = true;
+  game.solved = true;
+  gameState().solved = true;
+  writeSave();
+  typed = "";
+  renderAll();
+  if (!$("words").classList.contains("open")) toggleWords();
+}
+
 function showDone() {
   $("done-sub").textContent = `You found all ${game.answers.size} words for ${game.maxScore} points.`;
   $("done-new").hidden = false;
@@ -368,6 +410,8 @@ $("delete").addEventListener("click", deleteLetter);
 $("enter").addEventListener("click", submit);
 $("shuffle").addEventListener("click", shuffle);
 $("words-toggle").addEventListener("click", toggleWords);
+$("solve").addEventListener("click", () => openSheet("solve-sheet"));
+$("solve-confirm").addEventListener("click", solve);
 $("rank").addEventListener("click", () => {
   renderRanksSheet();
   openSheet("ranks-sheet");
@@ -397,7 +441,7 @@ document.addEventListener("keydown", (e) => {
     else closeWords();
     return;
   }
-  if (open) return;
+  if (open || game.solved) return;
   if (/^[a-z]$/i.test(e.key)) {
     addLetter(e.key);
     const cell = [...$("hive").children].find((c) => c.textContent === e.key.toLowerCase());
@@ -419,6 +463,15 @@ document.addEventListener("visibilitychange", () => {
 
 setMode(save.mode === "random" ? "random" : "daily");
 
+// When an updated version is installed, reload once so it shows straight away.
 if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !reloaded) {
+      reloaded = true;
+      location.reload();
+    }
+  });
+  navigator.serviceWorker.register("sw.js").then((reg) => reg.update()).catch(() => {});
 }
